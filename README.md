@@ -378,8 +378,9 @@ git push main ─→ Actions 构建前后端镜像 ─→ 推送 GHCR ─→ (�
   将每个连接的会话时区统一为东八区，`CURRENT_TIMESTAMP` 行为与本机 MySQL 一致。
 - **连接池**：免费实例 512MB + Serverless 云库，`MYSQL_MAX_POOL_SIZE=8`、`REDIS_MAX_ACTIVE=16`，
   超出本地默认（20/32）；`render.yaml` 已配好。
-- **休眠**：免费 Web 服务 15 分钟无流量会休眠，首个请求约 30–60 秒冷启动；
-  通过前端 Nginx 访问时表现为页面请求变慢，属正常现象。
+- **休眠**：免费 Web 服务 15 分钟无流量会休眠，首个请求需等待 **1–4 分钟**冷启动
+  （期间 Nginx 反代可能返回 502，属免费档正常现象；唤醒后即恢复正常速度）。
+  可先用任意请求触发 `/actuator/health` 预热再演示。
 - **内网限制**：Render 免费档 Web 服务**只能发内网请求、不能收**，因此前端 Nginx 走后端
   `*.onrender.com` 公网地址反代（`BACKEND_*` 环境变量，见 `web/nginx.conf.template`）。
 - **缓存无持久化**：Key Value 免费档重启丢数据。系统中的缓存/幂等/验证码均为短 TTL 数据，
@@ -398,6 +399,30 @@ git push main ─→ Actions 构建前后端镜像 ─→ 推送 GHCR ─→ (�
   需升级 Redisson ≥ 3.42 并启用对应能力开关。
 - **内存吃紧**：免费档 512MB 下 JVM 以容器感知方式运行（`MaxRAMPercentage=70`），
   若遇 OOM 可减小连接池或升级实例。
+
+### 13.6 线上部署验证记录（2026-11-15）
+
+实际部署拓扑：GitHub `willowq1025/inventory-system`（Actions 构建镜像推 GHCR）
+→ Render 免费档（`invsys-backend-wq` / `invsys-web-wq` / `inventory-cache` 三服务，Singapore）
+→ TiDB Cloud Serverless（东京 ap-northeast-1，MySQL 8.0.11 兼容）。
+
+端到端冒烟全部通过：
+
+| 验证项 | 结果 |
+|---|---|
+| Flyway V1/V2/V3 在 TiDB 迁移（31 张表） | ✅ |
+| `/actuator/health` | ✅ `{"status":"UP"}` |
+| 前端反代登录 `/api/auth/login` | ✅ 200 + JWT |
+| 前端反代看板/库存分页（雪花 ID 字符串、东八区时间） | ✅ 200 |
+
+部署过程中修复的三个云环境专属问题（均已在代码中固化）：
+
+1. `logback-spring.xml`：`TimeBasedRollingPolicy` 不支持 `%i`，prod 首启即崩 →
+   改为 `SizeAndTimeBasedRollingPolicy`；
+2. 端口约定：Render 注入 `PORT`（默认 10000），后端 `server.port` 改为
+   `${PORT:${SERVER_PORT:8080}}`，前端 nginx 增加 `listen 10000`；
+3. 反代回环：Render 边缘按 Host 头路由，nginx 需以**后端域名**覆盖 Host
+   （`BACKEND_HOST` 环境变量），否则触发 508 Loop Detected。
 
 ---
 
