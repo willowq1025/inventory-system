@@ -1,0 +1,22 @@
+# 生产环境：所有敏感值通过环境变量注入
+spring:
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+  flyway:
+    validate-on-migrate: true
+    out-of-order: false
+
+logging:
+  level:
+    root: WARN
+    com.enterprise: INFO
+    com.enterprise.common.log.aspect.WebLogAspect: INFO
+
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
+
+knife4j:
+  # 生产默认关闭；演示/联调可通过 KNIFE4J_ENABLE=true 打开接口文档
+  enable: ${KNIFE4J_ENABLE:false}

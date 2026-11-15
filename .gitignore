@@ -1,0 +1,17 @@
+target/
+*.class
+*.log
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+.idea/
+*.iml
+.vscode/
+.DS_Store
+node_modules/
+dist/
+.env.local
+.env.*.local
+.env
+deploy/data/
+deploy/logs/
+.gen/

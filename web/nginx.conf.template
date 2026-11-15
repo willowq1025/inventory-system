@@ -1,0 +1,81 @@
+# ==============================================================================
+# 前端 Nginx：SPA 静态资源 + /api 反向代理 + 接口文档代理
+# 模板变量（容器启动时由官方镜像 envsubst 渲染，未定义的环境变量保持原样）：
+#   BACKEND_SCHEME   后端协议，默认 http
+#   BACKEND_HOSTPORT 后端地址 host:port，默认 backend:8080（docker compose 服务名）
+#   BACKEND_SSL_NAME 后端 TLS SNI 名称（走 https 反代时必填，默认 backend）
+# 浏览器只访问 80 端口，后端不直接暴露，避免跨域并收敛攻击面
+# ==============================================================================
+upstream inventory_backend {
+    server ${BACKEND_HOSTPORT} max_fails=3 fail_timeout=15s;
+    keepalive 32;
+}
+
+server {
+    listen       80;
+    server_name  _;
+    charset      utf-8;
+
+    client_max_body_size     25m;   # Excel 导入上限（后端 multipart 为 20MB）
+    client_body_buffer_size  128k;
+    proxy_buffering          off;   # 大文件导出流式回传
+
+    gzip              on;
+    gzip_min_length   1k;
+    gzip_comp_level   5;
+    gzip_types        text/plain text/css application/json application/javascript
+                      application/xml text/javascript image/svg+xml;
+    gzip_vary         on;
+
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-Frame-Options SAMEORIGIN always;
+    add_header Referrer-Policy strict-origin-when-cross-origin always;
+
+    root  /usr/share/nginx/html;
+    index index.html;
+
+    # ---------------------------------------------------------------- 后端接口
+    location /api/ {
+        proxy_pass         ${BACKEND_SCHEME}://inventory_backend;
+        proxy_http_version 1.1;
+        proxy_set_header   Connection "";
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Real-IP $remote_addr;
+        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        # 走 https 反代（如 Render 免费档后端公网地址）时需要正确的 SNI
+        proxy_ssl_servername on;
+        proxy_ssl_name      ${BACKEND_SSL_NAME};
+        proxy_connect_timeout 10s;
+        proxy_send_timeout    120s;
+        proxy_read_timeout    120s;
+    }
+
+    # Knife4j / OpenAPI / 健康检查（dev 或 KNIFE4J_ENABLE=true 时可用）
+    location ~ ^/(doc\.html|webjars/|v3/api-docs|swagger-ui|swagger-resources|actuator) {
+        proxy_pass         ${BACKEND_SCHEME}://inventory_backend;
+        proxy_http_version 1.1;
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Real-IP $remote_addr;
+        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_ssl_servername on;
+        proxy_ssl_name      ${BACKEND_SSL_NAME};
+    }
+
+    # ---------------------------------------------------------------- 静态资源
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+
+    location = /index.html {
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+    }
+
+    # SPA 路由回退（history 模式）
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

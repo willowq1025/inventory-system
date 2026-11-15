@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.enterprise</groupId>
+        <artifactId>inventory-modules</artifactId>
+        <version>1.0.0</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>module-sale</artifactId>
+    <packaging>jar</packaging>
+    <name>module-sale</name>
+    <description>销售域：客户/销售单/销售出库</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.enterprise</groupId>
+            <artifactId>module-inventory</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.enterprise</groupId>
+            <artifactId>module-system</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.enterprise</groupId>
+            <artifactId>common-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.enterprise</groupId>
+            <artifactId>common-mybatis</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.enterprise</groupId>
+            <artifactId>common-excel</artifactId>
+        </dependency>
+    </dependencies>
+
+</project>

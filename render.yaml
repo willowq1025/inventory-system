@@ -1,0 +1,91 @@
+# ==============================================================================
+# Render Blueprint — 企业级进销存系统云上部署（免费档）
+#
+# 架构：
+#   inventory-backend  Web Service，runtime: image（GHCR 镜像，由 GitHub Actions 构建）
+#   inventory-web      Web Service，Nginx 反代后端公网地址（免费档 Web 服务不能收内网流量）
+#   inventory-cache    Key Value（Valkey 8，兼容 Redis 协议；免费档 25MB / 无持久化）
+# 数据库：TiDB Cloud Serverless（外部服务，通过环境变量注入连接串）
+#
+# 首次部署：控制台 New → Blueprint → 选择本仓库 → 按提示填入 3 个密钥：
+#   MYSQL_JDBC_URL / MYSQL_USER / MYSQL_PASSWORD（TiDB 连接信息，详见 README「云上部署」）
+# ==============================================================================
+services:
+  # ---------------------------------------------------------------- 缓存（分布式锁/幂等/验证码）
+  - type: keyvalue
+    name: inventory-cache
+    plan: free
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: []          # 仅内网可访问；免费档无持久化（重启丢缓存，应用侧可接受）
+
+  # ---------------------------------------------------------------- 后端 API（Spring Boot 3）
+  - type: web
+    name: inventory-backend
+    runtime: image
+    image:
+      url: ghcr.io/willowq1025/inventory-backend:main
+    plan: free
+    region: singapore         # 与 TiDB 集群（东京 ap-northeast-1）就近
+    healthCheckPath: /actuator/health
+    autoDeployTrigger: "off"  # 镜像由 Actions 构建推送；更新通过 Deploy Hook 或手动部署触发
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: SERVER_PORT
+        value: "8080"
+      # ---- TiDB Cloud Serverless（控制台部署时按提示填入真实值）
+      - key: MYSQL_JDBC_URL
+        sync: false
+      - key: MYSQL_USER
+        sync: false
+      - key: MYSQL_PASSWORD
+        sync: false
+      # ---- 其余配置
+      - key: MYSQL_MAX_POOL_SIZE
+        value: "8"            # 512MB 免费实例 + Serverless 云库，连接池收敛
+      - key: JWT_SECRET
+        generateValue: true   # Render 生成一次并持久保存
+      - key: KNIFE4J_ENABLE
+        value: "true"
+      - key: CORS_ORIGINS
+        value: "*"
+      # ---- 缓存接线（内网免认证，无需密码）
+      - key: REDIS_HOST
+        fromService:
+          type: keyvalue
+          name: inventory-cache
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          type: keyvalue
+          name: inventory-cache
+          property: port
+      - key: REDIS_MAX_ACTIVE
+        value: "16"
+      - key: REDIS_MAX_IDLE
+        value: "8"
+      - key: REDIS_MIN_IDLE
+        value: "2"
+
+  # ---------------------------------------------------------------- 前端（Vue3 SPA + Nginx）
+  - type: web
+    name: inventory-web
+    runtime: image
+    image:
+      url: ghcr.io/willowq1025/inventory-web:main
+    plan: free
+    region: singapore
+    healthCheckPath: /
+    autoDeployTrigger: "off"
+    envVars:
+      # 免费档 Web 服务可发内网请求但不能收 → 前端 Nginx 走后端公网地址反代
+      - key: BACKEND_SCHEME
+        value: https
+      - key: BACKEND_HOSTPORT
+        value: inventory-backend.onrender.com:443
+      - key: BACKEND_SSL_NAME
+        value: inventory-backend.onrender.com
+
+# 免费档资源有限，不生成预览环境
+previews:
+  generation: off

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.enterprise</groupId>
+        <artifactId>inventory-system</artifactId>
+        <version>1.0.0</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>inventory-common</artifactId>
+    <packaging>pom</packaging>
+    <name>inventory-common</name>
+    <description>公共能力层：响应/异常/缓存/权限/数据权限/日志/文档/通知/Excel</description>
+
+    <modules>
+        <module>common-core</module>
+        <module>common-redis</module>
+        <module>common-security</module>
+        <module>common-mybatis</module>
+        <module>common-log</module>
+        <module>common-excel</module>
+        <module>common-notify</module>
+        <module>common-web</module>
+    </modules>
+
+    <dependencies>
+
+    </dependencies>
+
+</project>

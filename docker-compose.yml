@@ -1,0 +1,132 @@
+# ==============================================================================
+# 企业级进销存系统 - 全栈一键编排
+#   docker compose --env-file .env up -d --build
+#   docker compose ps / logs -f backend / down -v
+# 服务：MySQL 8 + Redis 7 + Spring Boot 3 后端 + Vue3/Nginx 前端
+# ==============================================================================
+name: inventory-system
+
+services:
+  mysql:
+    image: mysql:8.0.36
+    container_name: inventory-mysql
+    restart: unless-stopped
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+08:00
+      - --lower_case_table_names=1
+      - --max_connections=500
+      - --innodb_buffer_pool_size=256M
+    environment:
+      TZ: Asia/Shanghai
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD:-root123456}"
+      MYSQL_DATABASE: "${MYSQL_DATABASE:-inventory}"
+      MYSQL_USER: "${MYSQL_USER:-inventory}"
+      MYSQL_PASSWORD: "${MYSQL_PASSWORD:-inventory123456}"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    ports:
+      - "127.0.0.1:${MYSQL_EXPOSE_PORT:-3306}:3306"
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    networks: [inv-net]
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: inventory-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:-redis123456}", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    environment:
+      TZ: Asia/Shanghai
+      REDIS_PASSWORD: "${REDIS_PASSWORD:-redis123456}"
+    volumes:
+      - redis-data:/data
+    ports:
+      - "127.0.0.1:${REDIS_EXPOSE_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a $$REDIS_PASSWORD ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+    networks: [inv-net]
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: inventory-system/backend:1.0.0
+    container_name: inventory-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      TZ: Asia/Shanghai
+      SPRING_PROFILES_ACTIVE: "${SPRING_PROFILES_ACTIVE:-prod}"
+      SERVER_PORT: 8080
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: "${MYSQL_DATABASE:-inventory}"
+      MYSQL_USER: "${MYSQL_USER:-inventory}"
+      MYSQL_PASSWORD: "${MYSQL_PASSWORD:-inventory123456}"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: "${REDIS_PASSWORD:-redis123456}"
+      REDIS_DB: "${REDIS_DB:-0}"
+      JWT_SECRET: "${JWT_SECRET:-please-change-this-jwt-secret-to-a-random-64-char-string}"
+      JWT_TTL: "${JWT_TTL:-8h}"
+      KNIFE4J_ENABLE: "${KNIFE4J_ENABLE:-true}"
+      CORS_ORIGINS: "${CORS_ORIGINS:-*}"
+      NOTIFY_EMAIL_ENABLED: "${NOTIFY_EMAIL_ENABLED:-false}"
+      NOTIFY_WEBHOOK_ENABLED: "${NOTIFY_WEBHOOK_ENABLED:-false}"
+      NOTIFY_WEBHOOK_URL: "${NOTIFY_WEBHOOK_URL:-}"
+      NOTIFY_WEBHOOK_SECRET: "${NOTIFY_WEBHOOK_SECRET:-change-me}"
+      MAIL_HOST: "${MAIL_HOST:-}"
+      MAIL_PORT: "${MAIL_PORT:-587}"
+      MAIL_USERNAME: "${MAIL_USERNAME:-}"
+      MAIL_PASSWORD: "${MAIL_PASSWORD:-}"
+      LOG_HOME: /app/logs
+    volumes:
+      - ./deploy/logs:/app/logs
+    ports:
+      - "127.0.0.1:${BACKEND_EXPOSE_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
+    networks: [inv-net]
+
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+    image: inventory-system/web:1.0.0
+    container_name: inventory-web
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      TZ: Asia/Shanghai
+    ports:
+      - "${WEB_PORT:-80}:80"
+    networks: [inv-net]
+
+volumes:
+  mysql-data:
+    driver: local
+  redis-data:
+    driver: local
+
+networks:
+  inv-net:
+    driver: bridge
