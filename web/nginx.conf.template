@@ -46,7 +46,7 @@ server {
         proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header   X-Forwarded-Proto $scheme;
         # 走 https 反代（如 Render 免费档后端公网地址）时需要正确的 SNI
-        proxy_ssl_servername on;
+        proxy_ssl_server_name on;
         proxy_ssl_name      ${BACKEND_SSL_NAME};
         proxy_connect_timeout 10s;
         proxy_send_timeout    120s;
@@ -61,7 +61,7 @@ server {
         proxy_set_header   X-Real-IP $remote_addr;
         proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header   X-Forwarded-Proto $scheme;
-        proxy_ssl_servername on;
+        proxy_ssl_server_name on;
         proxy_ssl_name      ${BACKEND_SSL_NAME};
     }
 
