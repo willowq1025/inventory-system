@@ -20,7 +20,7 @@ services:
 
   # ---------------------------------------------------------------- 后端 API（Spring Boot 3）
   - type: web
-    name: inventory-backend
+    name: invsys-backend-wq
     runtime: image
     image:
       url: ghcr.io/willowq1025/inventory-backend:main
@@ -69,7 +69,7 @@ services:
 
   # ---------------------------------------------------------------- 前端（Vue3 SPA + Nginx）
   - type: web
-    name: inventory-web
+    name: invsys-web-wq
     runtime: image
     image:
       url: ghcr.io/willowq1025/inventory-web:main
@@ -79,12 +79,13 @@ services:
     autoDeployTrigger: "off"
     envVars:
       # 免费档 Web 服务可发内网请求但不能收 → 前端 Nginx 走后端公网地址反代
+      # 注意：onrender.com 子域名全平台共享，需与后端服务名一致的可预测地址
       - key: BACKEND_SCHEME
         value: https
       - key: BACKEND_HOSTPORT
-        value: inventory-backend.onrender.com:443
+        value: invsys-backend-wq.onrender.com:443
       - key: BACKEND_SSL_NAME
-        value: inventory-backend.onrender.com
+        value: invsys-backend-wq.onrender.com
 
 # 免费档资源有限，不生成预览环境
 previews:

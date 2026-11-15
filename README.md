@@ -370,7 +370,7 @@ git push main ─→ Actions 构建前后端镜像 ─→ 推送 GHCR ─→ (�
    `JWT_SECRET` 由 Render `generateValue` 自动生成，无需填写。
 3. 点 **Apply**：Render 创建 Key Value → 拉取两个镜像启动。首次启动时 Flyway 自动在 TiDB
    上完成 V1/V2/V3 迁移（约 2–5 分钟），健康检查 `/actuator/health` 变绿即部署成功。
-4. 访问 `https://inventory-web.onrender.com`，用 `admin / Admin@123` 登录后**立即改密**。
+4. 访问 `https://invsys-web-wq.onrender.com`（前端服务页顶部链接），用 `admin / Admin@123` 登录后**立即改密**。
 
 ### 13.4 与本机部署的差异
 
