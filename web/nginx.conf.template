@@ -12,7 +12,9 @@ upstream inventory_backend {
 }
 
 server {
+    # 80 供本地 Compose 使用；10000 是 Render 注入 PORT 的默认值
     listen       80;
+    listen       10000;
     server_name  _;
     charset      utf-8;
 

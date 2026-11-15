@@ -1,5 +1,6 @@
 server:
-  port: ${SERVER_PORT:8080}
+  # Render 等平台注入 PORT（默认 10000）优先；本地/Compose 未注入时回落 8080
+  port: ${PORT:${SERVER_PORT:8080}}
   servlet:
     encoding:
       charset: UTF-8
