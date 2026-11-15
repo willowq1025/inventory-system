@@ -18,7 +18,9 @@ LABEL org.opencontainers.image.title="inventory-system-web" \
 ENV TZ=Asia/Shanghai \
     BACKEND_SCHEME=http \
     BACKEND_HOSTPORT=backend:8080 \
-    BACKEND_SSL_NAME=backend
+    BACKEND_SSL_NAME=backend \
+    BACKEND_HOST=backend \
+    BACKEND_HOST=backend
 RUN apk add --no-cache tzdata \
     && cp /usr/share/zoneinfo/$TZ /etc/localtime \
     && echo $TZ > /etc/timezone
